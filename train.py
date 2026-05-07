@@ -107,6 +107,7 @@ def main():
         "workers": args.workers,
         "project": args.project,
         "name": args.name,
+        "dfl": 0.0,
     }
     if args.device is not None:
         train_kwargs["device"] = args.device
