@@ -45,17 +45,17 @@ def filter(xml_dir, class_list, output_file, image_list=None):
                 target_num += 1
 
             if target_num > 0:
-                f.write(image_dir + '\n')
+                f.write('.' + image_dir + '\n')
 
 
 if __name__ == "__main__":
     config = {
         # 可选：只转换列表中的图片；如果想转换 xml_dir 下全部 XML，将 image_list 设为 None。
-        "image_list": "H:/dataset/WaterScenes/test.txt",
+        "image_list": "H:/dataset/WaterScenes/val.txt",
         "xml_dir": "H:/dataset/WaterScenes/detection/xml/",
         "class_list": "E:/Research Code/Camera-4D mmWave Fusion/Achelous_v2.0/model_data/waterscenes_benchmark_ship_only copy.txt",
         # YOLO 标注输出目录，每张图片生成一个同名 .txt 文件。
-        "output_file": "H:/dataset/WaterScenes/MIPC_Yolo/test.txt",
+        "output_file": "H:/dataset/WaterScenes/MIPC_Yolo/val.txt",
     }
 
     filter(**config)

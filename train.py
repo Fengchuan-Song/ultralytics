@@ -56,7 +56,7 @@ def _get_metric(metrics, *keys):
 
 
 def log_map_metrics_to_wandb(trainer):
-    """Log mAP50, mAP75 and mAP50-95 to W&B at the end of every fit epoch."""
+    """Log mAP50, mAP75, mAP50-95 and AR50 to W&B at the end of every fit epoch."""
     try:
         import wandb
     except ImportError:
@@ -70,16 +70,23 @@ def log_map_metrics_to_wandb(trainer):
 
     map50 = _get_metric(metrics, "metrics/mAP50(B)", "metrics/mAP50")
     map5095 = _get_metric(metrics, "metrics/mAP50-95(B)", "metrics/mAP50-95")
+    ar50 = _get_metric(metrics, "metrics/AR50(B)", "metrics/AR50", "metrics/recall(B)", "metrics/recall")
     if map50 is not None:
         log_data["mAP50"] = map50
     if map5095 is not None:
         log_data["mAP50-95"] = map5095
+    if ar50 is not None:
+        log_data["AR50"] = ar50
 
     validator_metrics = getattr(getattr(trainer, "validator", None), "metrics", None)
     box_metrics = getattr(validator_metrics, "box", None)
     map75 = getattr(box_metrics, "map75", None)
     if map75 is not None:
         log_data["mAP75"] = float(map75)
+    if "AR50" not in log_data:
+        mean_recall = getattr(box_metrics, "mr", None)
+        if mean_recall is not None:
+            log_data["AR50"] = float(mean_recall)
 
     if log_data:
         log_data["epoch"] = trainer.epoch + 1
