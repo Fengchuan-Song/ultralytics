@@ -6,7 +6,7 @@ from ultralytics.utils import SETTINGS
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes.yaml"
+DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes-origin.yaml"
 
 
 def parse_args():
@@ -107,7 +107,7 @@ def main():
         "workers": args.workers,
         "project": args.project,
         "name": args.name,
-        "dfl": 0.0,
+        # "dfl": 0.0,
     }
     if args.device is not None:
         train_kwargs["device"] = args.device
