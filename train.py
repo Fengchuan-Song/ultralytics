@@ -6,7 +6,7 @@ from ultralytics.utils import SETTINGS
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes-origin.yaml"
+DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes.yaml"
 
 
 def parse_args():
@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument("--device", default="0", help="Training device, e.g. 0, 0,1, cpu")
     parser.add_argument("--workers", type=int, default=8, help="Number of dataloader workers")
     parser.add_argument("--project", default="runs/detect", help="Save results to project/name")
-    parser.add_argument("--name", default="yolov8", help="Experiment name")
+    parser.add_argument("--name", default="yolov8-shipOnly", help="Experiment name")
     parser.add_argument("--no-wandb", action="store_true", help="Disable Weights & Biases logging")
     parser.add_argument("--wandb-project", default='Achelous++', help="Weights & Biases project name")
     parser.add_argument("--wandb-entity", default=None, help="Weights & Biases entity/team name")
@@ -107,7 +107,7 @@ def main():
         "workers": args.workers,
         "project": args.project,
         "name": args.name,
-        # "dfl": 0.0,
+        "dfl": 0.0,
     }
     if args.device is not None:
         train_kwargs["device"] = args.device
