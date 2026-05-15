@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
+import numpy as np
+
 from ultralytics import YOLO
 from ultralytics.utils import SETTINGS
 
@@ -55,8 +57,31 @@ def _get_metric(metrics, *keys):
     return None
 
 
+def _get_mar5095(validator_metrics):
+    """Compute mean AR over IoU 0.50:0.95 from the validator's TP matrix."""
+    stats = getattr(validator_metrics, "stats", None)
+    if not stats or not stats.get("tp") or not stats.get("target_cls"):
+        return None
+
+    tp = np.concatenate(stats["tp"], axis=0)
+    target_cls = np.concatenate(stats["target_cls"], axis=0)
+    if tp.size == 0 or target_cls.size == 0:
+        return 0.0
+
+    recalls = []
+    for cls in np.unique(target_cls).astype(int):
+        cls_targets = target_cls == cls
+        n_targets = cls_targets.sum()
+        if n_targets == 0:
+            continue
+        cls_tp = tp[np.concatenate(stats["pred_cls"], axis=0).astype(int) == cls]
+        recalls.append(cls_tp.sum(axis=0) / n_targets if cls_tp.size else np.zeros(tp.shape[1]))
+
+    return float(np.mean(recalls)) if recalls else 0.0
+
+
 def log_map_metrics_to_wandb(trainer):
-    """Log mAP50, mAP75, mAP50-95 and AR50 to W&B at the end of every fit epoch."""
+    """Log mAP50, mAP75, mAP50-95, AR50 and mAR50:95 to W&B at the end of every fit epoch."""
     try:
         import wandb
     except ImportError:
@@ -81,8 +106,13 @@ def log_map_metrics_to_wandb(trainer):
     validator_metrics = getattr(getattr(trainer, "validator", None), "metrics", None)
     box_metrics = getattr(validator_metrics, "box", None)
     map75 = getattr(box_metrics, "map75", None)
+    mar5095 = _get_metric(metrics, "metrics/mAR50:95(B)", "metrics/mAR50-95(B)", "metrics/mAR50:95")
+    if mar5095 is None:
+        mar5095 = _get_mar5095(validator_metrics)
     if map75 is not None:
         log_data["mAP75"] = float(map75)
+    if mar5095 is not None:
+        log_data["mAR50:95"] = mar5095
     if "AR50" not in log_data:
         mean_recall = getattr(box_metrics, "mr", None)
         if mean_recall is not None:
