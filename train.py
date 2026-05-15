@@ -13,15 +13,15 @@ DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes.yaml"
 
 def parse_args():
     parser = ArgumentParser(description="Train YOLOv8 on the WaterScenes dataset.")
-    parser.add_argument("--model", default="yolov8n.yaml", help="YOLOv8 model weights or yaml, e.g. yolov8n.yaml")
+    parser.add_argument("--model", default="yolov8s.yaml", help="YOLOv8 model weights or yaml, e.g. yolov8n.yaml")
     parser.add_argument("--data", default=str(DEFAULT_DATA), help="Dataset yaml path")
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
-    parser.add_argument("--imgsz", type=int, default=640, help="Input image size")
+    parser.add_argument("--imgsz", type=int, default=320, help="Input image size")
     parser.add_argument("--device", default="0", help="Training device, e.g. 0, 0,1, cpu")
     parser.add_argument("--workers", type=int, default=8, help="Number of dataloader workers")
     parser.add_argument("--project", default="runs/detect", help="Save results to project/name")
-    parser.add_argument("--name", default="yolov8-shipOnly-train scratch-640", help="Experiment name")
+    parser.add_argument("--name", default="yolov8s-shipOnly-train scratch", help="Experiment name")
     parser.add_argument("--no-wandb", action="store_true", help="Disable Weights & Biases logging")
     parser.add_argument("--wandb-project", default='Achelous++', help="Weights & Biases project name")
     parser.add_argument("--wandb-entity", default=None, help="Weights & Biases entity/team name")
