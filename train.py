@@ -60,24 +60,30 @@ def _get_metric(metrics, *keys):
 def _get_mar5095(validator_metrics):
     """Compute mean AR over IoU 0.50:0.95 from the validator's TP matrix."""
     stats = getattr(validator_metrics, "stats", None)
-    if not stats or not stats.get("tp") or not stats.get("target_cls"):
+    if not stats or not stats.get("tp") or not stats.get("target_cls") or not stats.get("pred_cls"):
         return None
 
     tp = np.concatenate(stats["tp"], axis=0)
     target_cls = np.concatenate(stats["target_cls"], axis=0)
+    pred_cls = np.concatenate(stats["pred_cls"], axis=0)
     if tp.size == 0 or target_cls.size == 0:
         return 0.0
 
     recalls = []
     for cls in np.unique(target_cls).astype(int):
-        cls_targets = target_cls == cls
-        n_targets = cls_targets.sum()
+        n_targets = (target_cls == cls).sum()
         if n_targets == 0:
             continue
-        cls_tp = tp[np.concatenate(stats["pred_cls"], axis=0).astype(int) == cls]
+        cls_tp = tp[pred_cls.astype(int) == cls]
         recalls.append(cls_tp.sum(axis=0) / n_targets if cls_tp.size else np.zeros(tp.shape[1]))
 
     return float(np.mean(recalls)) if recalls else 0.0
+
+
+def cache_mar5095_on_val_batch_end(validator):
+    """Cache mAR50:95 before Ultralytics clears validator.metrics.stats."""
+    if validator.batch_i + 1 == len(validator.dataloader):
+        validator.mar5095 = _get_mar5095(validator.metrics)
 
 
 def log_map_metrics_to_wandb(trainer):
@@ -108,8 +114,9 @@ def log_map_metrics_to_wandb(trainer):
     map75 = getattr(box_metrics, "map75", None)
     mar5095 = _get_metric(metrics, "metrics/mAR50:95(B)", "metrics/mAR50-95(B)", "metrics/mAR50:95")
     if mar5095 is None:
+        mar5095 = getattr(getattr(trainer, "validator", None), "mar5095", None)
+    if mar5095 is None:
         mar5095 = _get_mar5095(validator_metrics)
-        print(mar5095)
     if map75 is not None:
         log_data["mAP75"] = float(map75)
     if mar5095 is not None:
@@ -128,6 +135,7 @@ def main():
     args = parse_args()
     init_wandb(args)
     model = YOLO(args.model)
+    model.add_callback("on_val_batch_end", cache_mar5095_on_val_batch_end)
     model.add_callback("on_fit_epoch_end", log_map_metrics_to_wandb)
 
     train_kwargs = {
