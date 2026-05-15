@@ -13,7 +13,7 @@ DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes-autodl.y
 
 def parse_args():
     parser = ArgumentParser(description="Train YOLOv8 on the WaterScenes dataset.")
-    parser.add_argument("--model", default="yolov11s.yaml", help="YOLOv8 model weights or yaml, e.g. yolov8n.yaml")
+    parser.add_argument("--model", default="yolo11s.yaml", help="YOLOv8 model weights or yaml, e.g. yolov8n.yaml")
     parser.add_argument("--data", default=str(DEFAULT_DATA), help="Dataset yaml path")
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
