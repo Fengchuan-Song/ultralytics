@@ -109,6 +109,7 @@ def log_map_metrics_to_wandb(trainer):
     mar5095 = _get_metric(metrics, "metrics/mAR50:95(B)", "metrics/mAR50-95(B)", "metrics/mAR50:95")
     if mar5095 is None:
         mar5095 = _get_mar5095(validator_metrics)
+        print(mar5095)
     if map75 is not None:
         log_data["mAP75"] = float(map75)
     if mar5095 is not None:
