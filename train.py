@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument("--device", default="0", help="Training device, e.g. 0, 0,1, cpu")
     parser.add_argument("--workers", type=int, default=8, help="Number of dataloader workers")
     parser.add_argument("--project", default="runs/detect", help="Save results to project/name")
-    parser.add_argument("--name", default="yolov8-shipOnly", help="Experiment name")
+    parser.add_argument("--name", default="yolov8-shipOnly-w/o arguments", help="Experiment name")
     parser.add_argument("--no-wandb", action="store_true", help="Disable Weights & Biases logging")
     parser.add_argument("--wandb-project", default='Achelous++', help="Weights & Biases project name")
     parser.add_argument("--wandb-entity", default=None, help="Weights & Biases entity/team name")
@@ -108,6 +108,27 @@ def main():
         "project": args.project,
         "name": args.name,
         "dfl": 0.0,
+        # Disable all built-in data augmentation.
+        "hsv_h": 0.0,
+        "hsv_s": 0.0,
+        "hsv_v": 0.0,
+        "degrees": 0.0,
+        "translate": 0.0,
+        "scale": 0.0,
+        "shear": 0.0,
+        "perspective": 0.0,
+        "flipud": 0.0,
+        "fliplr": 0.0,
+        "bgr": 0.0,
+        "mosaic": 0.0,
+        "mixup": 0.0,
+        "cutmix": 0.0,
+        "copy_paste": 0.0,
+        "auto_augment": None,
+        "erasing": 0.0,
+        "multi_scale": 0.0,
+        "augment": False,
+        "close_mosaic": 0,
     }
     if args.device is not None:
         train_kwargs["device"] = args.device
