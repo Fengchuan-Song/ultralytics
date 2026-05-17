@@ -119,16 +119,19 @@ def log_map_metrics_to_wandb(trainer):
         mar5095 = _get_mar5095(validator_metrics)
     if map75 is not None:
         log_data["mAP75"] = float(map75)
+    print(mar5095)
     if mar5095 is not None:
         log_data["mAR50:95"] = mar5095
+        trainer.metrics["metrics/mAR50:95(B)"] = mar5095
     if "AR50" not in log_data:
         mean_recall = getattr(box_metrics, "mr", None)
         if mean_recall is not None:
             log_data["AR50"] = float(mean_recall)
+            trainer.metrics["metrics/AR50(B)"] = float(mean_recall)
 
     if log_data:
         log_data["epoch"] = trainer.epoch + 1
-        wandb.log(log_data, step=trainer.epoch + 1, commit=False)
+        wandb.log(log_data, step=trainer.epoch + 1, commit=True)
 
 
 def main():
