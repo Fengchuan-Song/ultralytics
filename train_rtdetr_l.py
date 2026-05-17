@@ -62,6 +62,8 @@ def _get_mar5095(validator_metrics):
     stats = getattr(validator_metrics, "stats", None)
     if not stats or not stats.get("tp") or not stats.get("target_cls") or not stats.get("pred_cls"):
         return None
+    if not stats["tp"] or not stats["target_cls"] or not stats["pred_cls"]:
+        return None
 
     tp = np.concatenate(stats["tp"], axis=0)
     target_cls = np.concatenate(stats["target_cls"], axis=0)
@@ -84,6 +86,17 @@ def cache_mar5095_on_val_batch_end(validator):
     """Cache mAR50:95 before Ultralytics clears validator.metrics.stats."""
     if validator.batch_i + 1 == len(validator.dataloader):
         validator.mar5095 = _get_mar5095(validator.metrics)
+
+
+def attach_rtdetr_validator_callbacks(trainer):
+    """Attach callbacks to RT-DETR's validator, which is created without model callbacks."""
+    validator = getattr(trainer, "validator", None)
+    if validator is None:
+        return
+
+    callbacks = validator.callbacks["on_val_batch_end"]
+    if cache_mar5095_on_val_batch_end not in callbacks:
+        validator.add_callback("on_val_batch_end", cache_mar5095_on_val_batch_end)
 
 
 def log_map_metrics_to_wandb(trainer):
@@ -119,7 +132,6 @@ def log_map_metrics_to_wandb(trainer):
         mar5095 = _get_mar5095(validator_metrics)
     if map75 is not None:
         log_data["mAP75"] = float(map75)
-    print(mar5095)
     if mar5095 is not None:
         log_data["mAR50:95"] = mar5095
         trainer.metrics["metrics/mAR50:95(B)"] = mar5095
@@ -138,7 +150,7 @@ def main():
     args = parse_args()
     init_wandb(args)
     model = RTDETR(args.model)
-    model.add_callback("on_val_batch_end", cache_mar5095_on_val_batch_end)
+    model.add_callback("on_pretrain_routine_end", attach_rtdetr_validator_callbacks)
     model.add_callback("on_fit_epoch_end", log_map_metrics_to_wandb)
 
     train_kwargs = {
