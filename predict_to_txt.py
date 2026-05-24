@@ -14,7 +14,11 @@ def parse_args() -> argparse.Namespace:
         description="Predict images with trained weights and save one txt file per image."
     )
     parser.add_argument("--weights", default='/data/yolov5/weights/yolov5_best.pt', help="Trained weight path, e.g. runs/detect/exp/weights/best.pt")
-    parser.add_argument("--source", default='/data_ssd/datasets/WaterScenes/MIPC_shipOnly/2007_test.txt', help="Image file, directory, glob, or txt list to predict")
+    parser.add_argument(
+        "--source",
+        default="/data_ssd/datasets/WaterScenes/MIPC_shipOnly/2007_test.txt",
+        help="Image file, directory, glob, or txt list to predict. Txt lines may be 'image_path annotations'.",
+    )
     parser.add_argument("--output", default="/data/yolov5/predict_results", help="Directory used to save txt prediction files")
     parser.add_argument("--imgsz", type=int, default=320, help="Inference image size")
     parser.add_argument("--conf", type=float, default=0.35, help="Confidence threshold")
@@ -37,9 +41,27 @@ def resolve_path(path: str) -> str:
         return path
 
     path_obj = Path(path)
-    if path_obj.is_absolute():
+    if path_obj.is_absolute() or path.startswith("/"):
         return str(path_obj)
     return str(ROOT / path_obj)
+
+
+def prepare_source(source: str, output_dir: Path) -> str:
+    """Convert txt files with annotations into pure image-path lists for prediction."""
+    source_path = Path(source)
+    if source_path.suffix.lower() != ".txt" or not source_path.is_file():
+        return source
+
+    image_paths = []
+    for line in source_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        image_paths.append(line.split(maxsplit=1)[0])
+
+    clean_source = output_dir / f"{source_path.stem}_images.txt"
+    clean_source.write_text("\n".join(image_paths) + ("\n" if image_paths else ""), encoding="utf-8")
+    return str(clean_source)
 
 
 def load_model(weights: str, model_type: str):
@@ -99,9 +121,9 @@ def write_detection_txt(result, txt_path: Path, score_decimals: int, box_decimal
 def main() -> None:
     args = parse_args()
     weights = resolve_path(args.weights)
-    source = resolve_path(args.source)
     output_dir = Path(resolve_path(args.output))
     output_dir.mkdir(parents=True, exist_ok=True)
+    source = prepare_source(resolve_path(args.source), output_dir)
 
     model = load_model(weights, args.model_type)
     predict_kwargs = {
