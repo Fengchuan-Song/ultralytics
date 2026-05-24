@@ -13,13 +13,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Predict images with trained weights and save one txt file per image."
     )
-    parser.add_argument("--weights", default='/data/yolov5/weights/yolov5_best.pt', help="Trained weight path, e.g. runs/detect/exp/weights/best.pt")
+    parser.add_argument("--weights", default='/root/ultralytics/runs/detect/runs/detect/yolov8-shipOnly-train scratch-5/weights/best.pt', help="Trained weight path, e.g. runs/detect/exp/weights/best.pt")
     parser.add_argument(
         "--source",
         default="/data_ssd/datasets/WaterScenes/MIPC_shipOnly/2007_test.txt",
         help="Image file, directory, glob, or txt list to predict. Txt lines may be 'image_path annotations'.",
     )
-    parser.add_argument("--output", default="/data/yolov5/predict_results", help="Directory used to save txt prediction files")
+    parser.add_argument("--output", default="/data/yolov8/predict_results", help="Directory used to save txt prediction files")
     parser.add_argument("--imgsz", type=int, default=320, help="Inference image size")
     parser.add_argument("--conf", type=float, default=0.35, help="Confidence threshold")
     parser.add_argument("--iou", type=float, default=0.35, help="NMS IoU threshold")
