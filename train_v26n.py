@@ -8,7 +8,7 @@ from ultralytics.utils import SETTINGS
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes-autodl.yaml"
+DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes.yaml"
 
 
 def parse_args():
