@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ultralytics import YOLO
+from ultralytics import RTDETR
 from ultralytics.utils import SETTINGS
 
 
@@ -12,8 +12,8 @@ DEFAULT_DATA = ROOT / "ultralytics" / "cfg" / "datasets" / "waterscenes-autodl.y
 
 
 def parse_args():
-    parser = ArgumentParser(description="Train YOLOv8 on the WaterScenes dataset.")
-    parser.add_argument("--model", default="rtdetr-l.yaml", help="YOLOv8 model weights or yaml, e.g. yolov8n.yaml")
+    parser = ArgumentParser(description="Train RT-DETR-l on the WaterScenes dataset.")
+    parser.add_argument("--model", default="rtdetr-l.yaml", help="RT-DETR model weights or yaml, e.g. rtdetr-l.yaml")
     parser.add_argument("--data", default=str(DEFAULT_DATA), help="Dataset yaml path")
     parser.add_argument("--epochs", type=int, default=100, help="Number of training epochs")
     parser.add_argument("--batch", type=int, default=16, help="Batch size")
@@ -62,6 +62,8 @@ def _get_mar5095(validator_metrics):
     stats = getattr(validator_metrics, "stats", None)
     if not stats or not stats.get("tp") or not stats.get("target_cls") or not stats.get("pred_cls"):
         return None
+    if not stats["tp"] or not stats["target_cls"] or not stats["pred_cls"]:
+        return None
 
     tp = np.concatenate(stats["tp"], axis=0)
     target_cls = np.concatenate(stats["target_cls"], axis=0)
@@ -86,28 +88,30 @@ def cache_mar5095_on_val_batch_end(validator):
         validator.mar5095 = _get_mar5095(validator.metrics)
 
 
-def log_map_metrics_to_wandb(trainer):
-    """Log mAP50, mAP75, mAP50-95, AR50 and mAR50:95 to W&B at the end of every fit epoch."""
-    try:
-        import wandb
-    except ImportError:
+def attach_rtdetr_validator_callbacks(trainer):
+    """Attach callbacks to RT-DETR's validator, which is created without model callbacks."""
+    validator = getattr(trainer, "validator", None)
+    if validator is None:
         return
 
-    if wandb.run is None:
-        return
+    callbacks = validator.callbacks["on_val_batch_end"]
+    if cache_mar5095_on_val_batch_end not in callbacks:
+        validator.add_callback("on_val_batch_end", cache_mar5095_on_val_batch_end)
 
+
+def add_extra_metrics_to_trainer(trainer):
+    """Add extra metrics before Ultralytics' W&B callback logs trainer.metrics."""
     metrics = trainer.metrics or {}
-    log_data = {}
 
     map50 = _get_metric(metrics, "metrics/mAP50(B)", "metrics/mAP50")
     map5095 = _get_metric(metrics, "metrics/mAP50-95(B)", "metrics/mAP50-95")
     ar50 = _get_metric(metrics, "metrics/AR50(B)", "metrics/AR50", "metrics/recall(B)", "metrics/recall")
     if map50 is not None:
-        log_data["mAP50"] = map50
+        trainer.metrics["mAP50"] = map50
     if map5095 is not None:
-        log_data["mAP50-95"] = map5095
+        trainer.metrics["mAP50-95"] = map5095
     if ar50 is not None:
-        log_data["AR50"] = ar50
+        trainer.metrics["AR50"] = ar50
 
     validator_metrics = getattr(getattr(trainer, "validator", None), "metrics", None)
     box_metrics = getattr(validator_metrics, "box", None)
@@ -118,25 +122,24 @@ def log_map_metrics_to_wandb(trainer):
     if mar5095 is None:
         mar5095 = _get_mar5095(validator_metrics)
     if map75 is not None:
-        log_data["mAP75"] = float(map75)
+        trainer.metrics["mAP75"] = float(map75)
+        trainer.metrics["metrics/mAP75(B)"] = float(map75)
     if mar5095 is not None:
-        log_data["mAR50:95"] = mar5095
-    if "AR50" not in log_data:
+        trainer.metrics["mAR50:95"] = mar5095
+        trainer.metrics["metrics/mAR50:95(B)"] = mar5095
+    if ar50 is None:
         mean_recall = getattr(box_metrics, "mr", None)
         if mean_recall is not None:
-            log_data["AR50"] = float(mean_recall)
-
-    if log_data:
-        log_data["epoch"] = trainer.epoch + 1
-        wandb.log(log_data, step=trainer.epoch + 1, commit=False)
+            trainer.metrics["AR50"] = float(mean_recall)
+            trainer.metrics["metrics/AR50(B)"] = float(mean_recall)
 
 
 def main():
     args = parse_args()
     init_wandb(args)
-    model = YOLO(args.model)
-    model.add_callback("on_val_batch_end", cache_mar5095_on_val_batch_end)
-    model.add_callback("on_fit_epoch_end", log_map_metrics_to_wandb)
+    model = RTDETR(args.model)
+    model.add_callback("on_pretrain_routine_end", attach_rtdetr_validator_callbacks)
+    model.add_callback("on_fit_epoch_end", add_extra_metrics_to_trainer)
 
     train_kwargs = {
         "data": args.data,
@@ -146,28 +149,6 @@ def main():
         "workers": args.workers,
         "project": args.project,
         "name": args.name,
-        "dfl": 0.0,
-        # Disable all built-in data augmentation.
-        # "hsv_h": 0.0,
-        # "hsv_s": 0.0,
-        # "hsv_v": 0.0,
-        # "degrees": 0.0,
-        # "translate": 0.0,
-        # "scale": 0.0,
-        # "shear": 0.0,
-        # "perspective": 0.0,
-        # "flipud": 0.0,
-        # "fliplr": 0.0,
-        # "bgr": 0.0,
-        # "mosaic": 0.0,
-        # "mixup": 0.0,
-        # "cutmix": 0.0,
-        # "copy_paste": 0.0,
-        # "auto_augment": None,
-        # "erasing": 0.0,
-        # "multi_scale": 0.0,
-        # "augment": False,
-        # "close_mosaic": 0,
     }
     if args.device is not None:
         train_kwargs["device"] = args.device
